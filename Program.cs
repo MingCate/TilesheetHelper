@@ -31,8 +31,8 @@ namespace TilesheetHelper
             tilesheet = Image.FromFile(filePath);
             if (tilesheet.Width > 54) res = 2;
 
-            internalOutlineColor = GetColors((Bitmap)tilesheet).ElementAtOrDefault(1); //the second least darkest color by luminance
-            //internalOutlineColor = Color.Black;
+            if (Path.GetFileName(filePath) == "templateTilesheet.png") internalOutlineColor = Color.Black;
+            else internalOutlineColor = GetColors((Bitmap)tilesheet).ElementAtOrDefault(1); //the second least darkest color by luminance
 
             GenerateMergedTilesheet(tilesheet, filePath);
         }
@@ -40,7 +40,7 @@ namespace TilesheetHelper
         static string GetTilesheetPath(string[] args)
         {
             if (args.Any())
-            {
+            { //check if .png
                 try
                 {
                     if (!CheckTilesheetDimensions(Image.FromFile(args[0]))) throw new ArgumentOutOfRangeException();
@@ -101,7 +101,7 @@ namespace TilesheetHelper
         static void PrintConsoleError(Exception ex)
         {
             Console.ForegroundColor = ConsoleColor.Red;
-            if (ex is ArgumentOutOfRangeException) Console.WriteLine("The provided tilesheet has the wrong dimensions. Sheet should be 54x45 or 108x90. Reference defaulttilesheet.png for an example sheet.");
+            if (ex is ArgumentOutOfRangeException) Console.WriteLine("The provided tilesheet has the wrong dimensions. Sheet should be 54x45 or 108x90. Reference templateTilesheet.png for an example sheet.");
             else if (ex is FileNotFoundException) Console.WriteLine("No png file was found in the " + Path.GetFileName(Directory.GetCurrentDirectory()) + " folder.");
             else if (ex is PlatformNotSupportedException) Console.WriteLine("Sorry, but the image editing tools TilesheetHelper uses are only supported by Windows, so TilesheetHelper doesn't work on Mac or Linux.");
             Console.ForegroundColor = ConsoleColor.Gray;
@@ -161,7 +161,7 @@ namespace TilesheetHelper
             }
 
 
-            bitmap.Save(Path.GetFileName(filePath).Replace(".png", "merged.png"), System.Drawing.Imaging.ImageFormat.Png);
+            bitmap.Save(Path.GetFileName(filePath).Replace(".png", "Merged.png"), System.Drawing.Imaging.ImageFormat.Png);
         }
         static void DrawRect(Point srcPoint, Point destPoint, int width, int height)
         {
