@@ -2,19 +2,24 @@
 using System.IO;
 using System.Drawing;
 using System.Runtime;
+using System.Diagnostics;
 
 namespace TilesheetHelper
 {
     internal class Program
     {
         public const int inputWidth = 54;
+        public const int splicedSheetInputWidth = 117;
         public const int inputHeight = 45;
         public const int tileSize = 8;
         public static int res = 1; //resolution
 
         public static Image tilesheet;
         public static Graphics canvas;
-        public static Color internalOutlineColor; 
+        public static Color internalOutlineColor;
+        public static Stopwatch timer = new Stopwatch();
+        public static string[] argss = new string[0];
+
         static void Main(string[] args)
         {
             if (!OperatingSystem.IsWindows())
@@ -23,6 +28,8 @@ namespace TilesheetHelper
                 PrintConsoleError(ex);
                 throw ex;
             }
+
+            timer.Start();
 
             string filePath;// = GetTileSheetPath(args);
             if (GetTilesheetPath(args) is string path) filePath = path;
@@ -34,7 +41,14 @@ namespace TilesheetHelper
             if (Path.GetFileName(filePath) == "templateTilesheet.png") internalOutlineColor = Color.Black;
             else internalOutlineColor = GetColors((Bitmap)tilesheet).ElementAtOrDefault(1); //the second least darkest color by luminance
 
-            GenerateMergedTilesheet(tilesheet, filePath);
+            argss = args;
+
+            GenerateSplicedTilesheet(filePath);
+
+            GenerateTileMergeUnderlayTilesheet(filePath);
+
+            GenerateTileMergeOverlayTilesheet(filePath);
+
         }
 
         static string GetTilesheetPath(string[] args)
@@ -109,7 +123,7 @@ namespace TilesheetHelper
             Console.ReadKey();
         }
 
-        static void GenerateMergedTilesheet(Image tilesheet, string filePath)
+        static void GenerateSplicedTilesheet(string filePath)
         {
             if (!OperatingSystem.IsWindows()) return;
             var bitmap = new Bitmap(117 * res, 45 * res); //144 135
@@ -160,8 +174,152 @@ namespace TilesheetHelper
                 canvas.Save();
             }
 
+            tilesheet = bitmap; // TODO :
 
-            bitmap.Save(Path.GetFileName(filePath).Replace(".png", "Merged.png"), System.Drawing.Imaging.ImageFormat.Png);
+            bitmap.Save(Path.GetFileName(filePath).Replace(".png", "Spliced.png"), System.Drawing.Imaging.ImageFormat.Png); //patchwork?
+        }
+
+
+        static void GenerateTileMergeUnderlayTilesheet(string filePath)
+        {
+            if (!OperatingSystem.IsWindows()) return;
+            var bitmap = new Bitmap(144 * res, 135 * res); //144 135
+
+            canvas = Graphics.FromImage(bitmap);
+            {
+                DrawRect(new Point(0, 0), new Point(0, 0), splicedSheetInputWidth, inputHeight); //copying original input
+
+                DrawRect(new Point(9, 0), new Point(117, 0), 26, 8); //top-bottom borders
+                DrawRect(new Point(9, 18), new Point(117, 9), 26, 8);
+                for (int i = 0; i < 2; i++)
+                {
+                    DrawRect(new Point(9, 0), new Point(0 + 27 * i, 99), 26, 8);
+                    DrawRect(new Point(9, 18), new Point(0 + 27 * i, 108), 26, 8);
+                }
+
+                DrawRect(new Point(54, 36), new Point(81, 99), 26, 8);  //top-bottom border blends
+                DrawRect(new Point(54, 36), new Point(0, 126), 26, 8);
+                DrawRect(new Point(54, 36), new Point(27, 126), 26, 8);
+
+                for (int i = 0; i < 3; i++) //left-right borders
+                {
+                    DrawRect(new Point(0, 0 + 9 * i), new Point(117 + 9 * i, 18), 8, 8);
+                    DrawRect(new Point(36, 0 + 9 * i), new Point(117 + 9 * i, 27), 8, 8);
+                }
+                for (int i = 0; i < 2; i++)
+                {
+                    DrawRect(new Point(0, 0), new Point(36, 45 + 27 * i), 8, 26);
+                    DrawRect(new Point(36, 0), new Point(45, 45 + 27 * i), 8, 26);
+                    DrawRect(new Point(45, 0), new Point(63, 45 + 27 * i), 8, 26);  //left-right border blends
+                }
+                DrawRect(new Point(45, 0), new Point(54, 108), 8, 26);
+
+                for (int i = 0; i < 3; i++) //center tiles
+                {
+                    for (int k = 0; k < 4; k++)
+                    {
+                        DrawRect(new Point(9 + 9 * i, 9), new Point(0 + 9 * k, 45 + 18 * i), 8, 8);
+                        DrawRect(new Point(9 + 9 * i, 9), new Point(0 + 9 * k, 54 + 18 * i), 8, 8);
+                    }
+                }
+
+                DrawRect(new Point(9, 9), new Point(72, 45), 26, 8);
+                DrawRect(new Point(9, 9), new Point(72, 54), 26, 8);
+
+                for (int i = 0; i < 3; i++)
+                {
+                    for (int k = 0; k < 3; k++)
+                    {
+                        DrawRect(new Point(9 + 9 * i, 9), new Point(72 + k * 9, 63 + i * 9), 8, 8);
+                    }
+                }
+
+                DrawRect(new Point(9, 9), new Point(72, 90), 26, 8);
+                DrawRect(new Point(9, 9), new Point(54, 99), 26, 8);
+
+                for (int i = 0; i < 3; i++)
+                {
+                    for (int k = 0; k < 2; k++)
+                    {
+                        DrawRect(new Point(9 + 9 * i, 9), new Point(99 + k * 9, 45 + i * 9), 8, 8);
+                        DrawRect(new Point(9 + 9 * i, 9), new Point(99 + k * 9, 72 + i * 9), 8, 8);
+                    }
+                }
+
+                for (int i = 0; i < 3; i++) //horizontal strips
+                {
+                    DrawRect(new Point(54 + 9 * i, 0), new Point(54, 45 + i * 9), 8, 8);
+                    DrawRect(new Point(54 + 9 * i, 27), new Point(54, 72 + i * 9), 8, 8);
+                    DrawRect(new Point(81, 0 + 9 * i), new Point(27 + i * 9, 117), 8, 8);//vertical strips
+                    DrawRect(new Point(108, 0 + 9 * i), new Point(0 + i * 9, 117), 8, 8);
+                }
+
+                canvas.Save();
+            }
+
+            tilesheet = bitmap;
+
+            bitmap.Save(Path.GetFileName(filePath).Replace(".png", "TileMerge.png"), System.Drawing.Imaging.ImageFormat.Png); //patchwork?
+        }
+
+        static void GenerateTileMergeOverlayTilesheet(string filePath)
+        {
+            if (!OperatingSystem.IsWindows()) return;
+            var bitmap = new Bitmap(144, 135); //144 135
+
+            var mergeShapeBitmap = Properties.Resources.DirtMerge; //Image.FromFile()
+            var mergeShapeOutlineColor = GetColors(mergeShapeBitmap).ElementAtOrDefault(0);
+            var mergeTextureBitmap = (Bitmap)tilesheet;
+
+            if (argss.Length > 1) mergeTextureBitmap = GetBaseResolutionBitmap((Bitmap)Image.FromFile(argss[1])); //!!!
+            mergeTextureBitmap.GetBaseResolutionBitmap(); //= //GetBaseResolutionBitmap(mergeTextureBitmap);
+
+            canvas = Graphics.FromImage(bitmap);
+            {
+                //DrawRect(new Point(0, 0), new Point(0, 0), splicedSheetInputWidth, inputHeight); //copying original input
+
+                for (int i = 0; i < bitmap.Width; i++)
+                {
+                    for (int j = 0; j < bitmap.Height; j++)
+                    {
+                        if (mergeShapeBitmap.GetPixel(i, j).A != 0)
+                        {
+                            if (mergeShapeBitmap.GetPixel(i, j) == mergeShapeOutlineColor) bitmap.SetPixel(i, j, internalOutlineColor);
+                            else bitmap.SetPixel(i, j, mergeTextureBitmap.GetPixel(i / res, j / res));
+                        }
+                    }
+                }
+                canvas.Save();
+            }
+            SaveBitmap(bitmap, filePath, "TileMergeOverlay");
+
+            GenerateCombinedTileMergeTilesheet(filePath, bitmap);
+        }
+
+        static void GenerateCombinedTileMergeTilesheet(string filePath, Bitmap overlayTilesheet)
+        {
+            if (!OperatingSystem.IsWindows()) return;
+            var underlayTilesheet = GetBaseResolutionBitmap((Bitmap)tilesheet);
+
+            var bitmap = new Bitmap(144, 135); //144 135
+
+            //overlayTilesheet = Properties.Resources.DirtMerge;
+
+            //var mergeShapeBitmap = Properties.Resources.DirtMerge; //Image.FromFile()
+            //var mergeShapeOutlineColor = GetColors(mergeShapeBitmap).ElementAtOrDefault(0);
+            //var mergeTextureBitmap = (Bitmap)tilesheet;
+
+            canvas = Graphics.FromImage(bitmap);
+            {
+                canvas.DrawImage(underlayTilesheet,
+                    new Rectangle(0, 0, 144, 135),
+                    new Rectangle(0, 0, 144, 135), GraphicsUnit.Pixel);
+                canvas.DrawImage(overlayTilesheet,
+                    new Rectangle(0, 0, 144, 135),
+                    new Rectangle(0, 0, 144, 135), GraphicsUnit.Pixel);
+                canvas.Save();
+            }
+            SaveBitmap(bitmap, filePath, "TileMergeSheet");
         }
         static void DrawRect(Point srcPoint, Point destPoint, int width, int height)
         {
@@ -207,6 +365,110 @@ namespace TilesheetHelper
                 double luminance = c.R * 0.3 + c.G * 0.6 + c.B * 0.1;
                 return luminance;
             }).ToArray();
+        }
+        /*static Bitmap GetUpscaledBitmap(Bitmap bmp)
+        {
+            if (!OperatingSystem.IsWindows()) return null;
+            //if (!OperatingSystem.IsWindows()) return null;
+
+            var upscaledBmp = new Bitmap(bmp.Width * 2, bmp.Height * 2);
+
+            canvas = Graphics.FromImage(upscaledBmp);
+            {
+                for (int i = 0; i < bmp.Width; i++)
+                {
+                    for (int j = 0; j < bmp.Height; j++)
+                    {
+                        if (bmp.GetPixel(i, j).A != 0)
+                        {
+                            Color color = bmp.GetPixel(i, j);
+                            upscaledBmp.SetPixel(i * res, j * res, color);
+                            upscaledBmp.SetPixel(i * res + 1, j * res, color);
+                            upscaledBmp.SetPixel(i * res, j * res + 1, color);
+                            upscaledBmp.SetPixel(i * res + 1, j * res + 1, color);
+                        }
+                    }
+                }
+                canvas.Save();
+            }
+            return upscaledBmp;
+        }
+        static Bitmap GetBaseResolutionBitmap(Bitmap bmp)
+        {
+            if (res == 1) return bmp;
+
+            var downscaledBmp = new Bitmap(bmp.Width / 2, bmp.Height / 2);
+
+            canvas = Graphics.FromImage(downscaledBmp);
+            {
+                for (int i = 0; i < downscaledBmp.Width; i++)
+                {
+                    for (int j = 0; j < downscaledBmp.Height; j++)
+                    {
+                        if (bmp.GetPixel(i * 2, j * 2).A != 0)
+                        {
+                            downscaledBmp.SetPixel(i, j, bmp.GetPixel(i * 2, j * 2));
+                        }
+                    }
+                }
+                canvas.Save();
+            }
+            return downscaledBmp;
+        }*/
+        static void SaveBitmap(Bitmap bmp, string filePath, string fileSuffix)
+        {
+            if (res == 2) bmp = GetUpscaledBitmap(bmp);
+            bmp.Save(Path.GetFileName(filePath).Replace(".png", fileSuffix + ".png"), System.Drawing.Imaging.ImageFormat.Png);
+        }
+    }
+    public static class BitmapExtensions
+    {
+        static Bitmap GetUpscaledBitmap(this Bitmap bmp, int res)
+        {
+            if (!OperatingSystem.IsWindows()) return null;
+
+            var upscaledBmp = new Bitmap(bmp.Width * 2, bmp.Height * 2);
+
+            var canvas = Graphics.FromImage(upscaledBmp);
+            {
+                for (int i = 0; i < bmp.Width; i++)
+                {
+                    for (int j = 0; j < bmp.Height; j++)
+                    {
+                        if (bmp.GetPixel(i, j).A != 0)
+                        {
+                            Color color = bmp.GetPixel(i, j);
+                            upscaledBmp.SetPixel(i * res, j * res, color);
+                            upscaledBmp.SetPixel(i * res + 1, j * res, color);
+                            upscaledBmp.SetPixel(i * res, j * res + 1, color);
+                            upscaledBmp.SetPixel(i * res + 1, j * res + 1, color);
+                        }
+                    }
+                }
+                canvas.Save();
+            }
+            return upscaledBmp;
+        }
+        public static Bitmap GetBaseResolutionBitmap(this Bitmap bmp)
+        {
+
+            var downscaledBmp = new Bitmap(bmp.Width / 2, bmp.Height / 2);
+
+            var canvas = Graphics.FromImage(downscaledBmp);
+            {
+                for (int i = 0; i < downscaledBmp.Width; i++)
+                {
+                    for (int j = 0; j < downscaledBmp.Height; j++)
+                    {
+                        if (bmp.GetPixel(i * 2, j * 2).A != 0)
+                        {
+                            downscaledBmp.SetPixel(i, j, bmp.GetPixel(i * 2, j * 2));
+                        }
+                    }
+                }
+                canvas.Save();
+            }
+            return downscaledBmp;
         }
     }
 }
