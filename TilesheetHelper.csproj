@@ -6,6 +6,12 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <ApplicationIcon>icon.ico</ApplicationIcon>
+
+	  <!-- 
+      Turns off reference assembly generation 
+      See: https://learn.microsoft.com/en-us/dotnet/standard/assembly/reference-assemblies
+      -->
+	  <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
   </PropertyGroup>
 
   <ItemGroup>

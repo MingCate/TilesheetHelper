@@ -265,14 +265,25 @@ namespace TilesheetHelper
         static void GenerateTileMergeOverlayTilesheet(string filePath)
         {
             if (!OperatingSystem.IsWindows()) return;
+
+            string overlayFilePath = filePath;
+
             var bitmap = new Bitmap(144, 135); //144 135
 
             var mergeShapeBitmap = Properties.Resources.DirtMerge; //Image.FromFile()
-            var mergeShapeOutlineColor = GetColors(mergeShapeBitmap).ElementAtOrDefault(0);
-            var mergeTextureBitmap = (Bitmap)tilesheet;
+            var mergeShapeOutline = GetColors(mergeShapeBitmap).ElementAtOrDefault(0);
+            var mergeOverlayTexture = (Bitmap)tilesheet; // Properties.Resources.DirtMerge; 
 
-            if (argss.Length > 1) mergeTextureBitmap = GetBaseResolutionBitmap((Bitmap)Image.FromFile(argss[1])); //!!!
-            mergeTextureBitmap.GetBaseResolutionBitmap(); //= //GetBaseResolutionBitmap(mergeTextureBitmap);
+            if (argss.Length > 1)
+            {
+                mergeOverlayTexture = (Bitmap)Image.FromFile(argss[1]);
+                overlayFilePath = argss[1];
+            }//!!!
+
+            if (mergeOverlayTexture.Width > 144) mergeOverlayTexture = GetBaseResolutionBitmap(mergeOverlayTexture); //super duper hacky
+
+            Color overlayOutlineColor = GetColors(mergeOverlayTexture).ElementAtOrDefault(1); //only necessary because its not necessarily the same type as the main tile
+
 
             canvas = Graphics.FromImage(bitmap);
             {
@@ -284,14 +295,15 @@ namespace TilesheetHelper
                     {
                         if (mergeShapeBitmap.GetPixel(i, j).A != 0)
                         {
-                            if (mergeShapeBitmap.GetPixel(i, j) == mergeShapeOutlineColor) bitmap.SetPixel(i, j, internalOutlineColor);
-                            else bitmap.SetPixel(i, j, mergeTextureBitmap.GetPixel(i / res, j / res));
+                            if (mergeShapeBitmap.GetPixel(i, j) == mergeShapeOutline) bitmap.SetPixel(i, j, overlayOutlineColor);
+                            else bitmap.SetPixel(i, j, mergeOverlayTexture.GetPixel(i, j));
                         }
                     }
                 }
                 canvas.Save();
             }
-            SaveBitmap(bitmap, filePath, "TileMergeOverlay");
+
+            SaveBitmap(bitmap, overlayFilePath, "TileMergeOverlay");
 
             GenerateCombinedTileMergeTilesheet(filePath, bitmap);
         }
@@ -306,17 +318,40 @@ namespace TilesheetHelper
             //overlayTilesheet = Properties.Resources.DirtMerge;
 
             //var mergeShapeBitmap = Properties.Resources.DirtMerge; //Image.FromFile()
-            //var mergeShapeOutlineColor = GetColors(mergeShapeBitmap).ElementAtOrDefault(0);
+            var overlayOutlineColor = GetColors(overlayTilesheet).ElementAtOrDefault(0);
             //var mergeTextureBitmap = (Bitmap)tilesheet;
 
             canvas = Graphics.FromImage(bitmap);
             {
-                canvas.DrawImage(underlayTilesheet,
-                    new Rectangle(0, 0, 144, 135),
-                    new Rectangle(0, 0, 144, 135), GraphicsUnit.Pixel);
+                //canvas.DrawImage(underlayTilesheet,
+                //    new Rectangle(0, 0, 144, 135),
+                //    new Rectangle(0, 0, 144, 135), GraphicsUnit.Pixel);
                 canvas.DrawImage(overlayTilesheet,
                     new Rectangle(0, 0, 144, 135),
                     new Rectangle(0, 0, 144, 135), GraphicsUnit.Pixel);
+
+                Color underlayOutlineColor = GetColors(underlayTilesheet).ElementAtOrDefault(1);
+                //underlayOutlineColor = Color.Red;
+                for (int i = 0; i < bitmap.Width; i++)
+                {
+                    for (int j = 0; j < bitmap.Height; j++)
+                    {
+                        if (overlayTilesheet.GetPixel(i, j).A != 0) //refactor into method probably
+                        {
+                            if (overlayTilesheet.GetPixel(i, j) == overlayOutlineColor)
+                            {
+                                Point[] cardinalAdjacentPixels = new[] { new Point(-1, 0), new Point(0, -1), new Point(1, 0), new Point(0, 1) };
+                                foreach (Point point in cardinalAdjacentPixels)
+                                {
+                                    if (!IsPixelInTileGridGap(point.X + i, point.Y + j) && overlayTilesheet.GetPixel(point.X + i, point.Y + j).A == 0
+                                        && Luminance(underlayTilesheet.GetPixel(point.X + i, point.Y + j)) > Luminance(underlayOutlineColor))
+                                        bitmap.SetPixel(point.X + i, point.Y + j, underlayOutlineColor); //this can replace darker pixels. shouldnt be possible. could it always go one darker maybe?
+                                }
+                            }
+                        }
+                    }
+                }
+
                 canvas.Save();
             }
             SaveBitmap(bitmap, filePath, "TileMergeSheet");
@@ -360,13 +395,14 @@ namespace TilesheetHelper
                 }
             }
 
-            return colors.OrderBy(c =>
-            {
-                double luminance = c.R * 0.3 + c.G * 0.6 + c.B * 0.1;
-                return luminance;
-            }).ToArray();
+            return colors.OrderBy(c => Luminance(c)).ToArray();
         }
-        /*static Bitmap GetUpscaledBitmap(Bitmap bmp)
+
+        static double Luminance(Color c)
+        {
+            return c.R * 0.3 + c.G * 0.6 + c.B * 0.1;
+        }
+        static Bitmap GetUpscaledBitmap(Bitmap bmp)
         {
             if (!OperatingSystem.IsWindows()) return null;
             //if (!OperatingSystem.IsWindows()) return null;
@@ -414,14 +450,18 @@ namespace TilesheetHelper
                 canvas.Save();
             }
             return downscaledBmp;
-        }*/
+        }
         static void SaveBitmap(Bitmap bmp, string filePath, string fileSuffix)
         {
             if (res == 2) bmp = GetUpscaledBitmap(bmp);
             bmp.Save(Path.GetFileName(filePath).Replace(".png", fileSuffix + ".png"), System.Drawing.Imaging.ImageFormat.Png);
         }
+        static bool IsPixelInTileGridGap(int x, int y)
+        {
+            return (x + 1) % 9 == 0 || (y + 1) % 9 == 0;
+        }
     }
-    public static class BitmapExtensions
+    /*public static class BitmapExtensions
     {
         static Bitmap GetUpscaledBitmap(this Bitmap bmp, int res)
         {
@@ -470,5 +510,5 @@ namespace TilesheetHelper
             }
             return downscaledBmp;
         }
-    }
+    }*/
 }
