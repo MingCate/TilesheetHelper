@@ -8,17 +8,37 @@ namespace TilesheetHelper
 {
     internal class Program
     {
-        public const int inputWidth = 54;
-        public const int splicedSheetInputWidth = 117;
-        public const int inputHeight = 45;
-        public const int tileSize = 8;
-        public static int res = 1; //resolution
+        public const int basicSheetHeight = 45;
+        public const int basicInputSheetWidth = 54;
+        public const int splicedSheetWidth = 117;
+        public const int fullSheetHeight = 135;
+        public const int fullSheetWidth = 144;
+        //public const int tileSize = 8;
 
-        public static Image tilesheet;
+        //public static int res = 1; //resolution
+
+        public static Image tilesheet; //would like to replace but drawrect stuff... sighs... params[] for drawrect?. YES get rid of and also check getbaseresolution instances to remove. and make the overlay load in at the start.
         public static Graphics canvas;
         public static Color internalOutlineColor;
         public static Stopwatch timer = new Stopwatch();
-        public static string[] argss = new string[0];
+        //public static string[] selectedFiles = new string[0]; //array of a custom type that contains res data, filepath, tilesheet type?
+        public static List<TilesheetFile> selectedFiles = new List<TilesheetFile>();
+        public class TilesheetFile
+        {
+            public string path;
+            public TilesheetType type;
+            public int res;
+            public Bitmap originalBitmap;
+
+            public TilesheetFile(string path, TilesheetType type, int res)
+            {
+                this.type = type;
+                this.path = path;
+                this.res = res;
+                this.originalBitmap = (Bitmap)Image.FromFile(path);
+                if (res == 2) originalBitmap = GetBaseResolutionBitmap(originalBitmap);
+            }
+        }
 
         static void Main(string[] args)
         {
@@ -31,46 +51,40 @@ namespace TilesheetHelper
 
             timer.Start();
 
-            string filePath;// = GetTileSheetPath(args);
-            if (GetTilesheetPath(args) is string path) filePath = path;
+            //string filePath;// = GetTileSheetPath(args);
+            TilesheetFile primaryTilesheet;
+            if (GetTilesheetFile(args) is TilesheetFile file) primaryTilesheet = file;
             else return;
 
-            tilesheet = Image.FromFile(filePath);
-            if (tilesheet.Width > 54) res = 2;
+            tilesheet = primaryTilesheet.originalBitmap; //Image.FromFile(primaryTilesheet.path);
 
-            if (Path.GetFileName(filePath) == "templateTilesheet.png") internalOutlineColor = Color.Black;
+            if (Path.GetFileName(primaryTilesheet.path) == "templateTilesheet.png") internalOutlineColor = Color.Black;
             else internalOutlineColor = GetColors((Bitmap)tilesheet).ElementAtOrDefault(1); //the second least darkest color by luminance
 
-            argss = args;
+            //selectedFiles = args;
 
-            GenerateSplicedTilesheet(filePath);
+            GenerateSplicedTilesheet(primaryTilesheet);
 
-            GenerateTileMergeUnderlayTilesheet(filePath);
+            GenerateTileMergeUnderlayTilesheet(primaryTilesheet);
 
-            GenerateTileMergeOverlayTilesheet(filePath);
+            GenerateTileMergeOverlayTilesheet(primaryTilesheet);
 
         }
 
-        static string GetTilesheetPath(string[] args)
+        static TilesheetFile GetTilesheetFile(string[] args)
         {
             if (args.Any())
             { //check if .png
                 try
                 {
-                    if (!CheckTilesheetDimensions(Image.FromFile(args[0]))) throw new ArgumentOutOfRangeException();
-                    return args[0];
-                }
-                catch (Exception ex)
-                {
-                    PrintConsoleError(ex);
-                    //throw;
-                }
-            }
-            else
-            {
-                try
-                {
-                    return GetTilesheetPathFromFolder();
+                    //if (!args[0].EndsWith(".png")) throw;
+                    TilesheetType type = GetTilesheetType(Image.FromFile(args[0]), out var res);
+                    var tilesheetFile = new TilesheetFile(args[0], type, res);
+
+                    if (type == TilesheetType.InvalidInput) throw new ArgumentOutOfRangeException();
+                    else selectedFiles.Add(tilesheetFile);
+
+                    return tilesheetFile;
                 }
                 catch (Exception ex)
                 {
@@ -80,7 +94,7 @@ namespace TilesheetHelper
             }
             return null;
         }
-        static string GetTilesheetPathFromFolder()
+        /*static string GetTilesheetPathFromFolder()
         {
             bool wrongSizeImageFound = false;
             foreach (var path in Directory.GetFiles(Directory.GetCurrentDirectory(), "*.png"))
@@ -94,23 +108,68 @@ namespace TilesheetHelper
             }
             if (wrongSizeImageFound) throw new ArgumentOutOfRangeException();
             throw new FileNotFoundException();
-        }
+        }*/
 
-        static bool CheckTilesheetDimensions(Image tilesheet)
+        /*static bool CheckTilesheetDimensions(Image tilesheet)
         {
-            int widthDiff = inputWidth - tilesheet.Width;
-            int heightDiff = inputHeight - tilesheet.Height;
+            int widthDiff = basicInputSheetWidth - tilesheet.Width;
+            int heightDiff = basicSheetHeight - tilesheet.Height;
             if (widthDiff >= 0 && widthDiff <= 1 && heightDiff >= 0 && heightDiff <= 1)
             {
                 return true;
             }
-            widthDiff = inputWidth * 2 - tilesheet.Width;
-            heightDiff = inputHeight * 2 - tilesheet.Height;
+            widthDiff = basicInputSheetWidth * 2 - tilesheet.Width;
+            heightDiff = basicSheetHeight * 2 - tilesheet.Height;
             if (widthDiff >= 0 && widthDiff <= 2 && heightDiff >= 0 && heightDiff <= 2)
             {
                 return true;
             }
             return false;
+        }*/
+        public enum TilesheetType
+        {
+            InvalidInput = -1,
+            BasicInput,
+            //StreamlinedInput,
+            SplicedSheet,
+            TileUnderlay,
+            TileOverlay,
+        }
+        static TilesheetType GetTilesheetType(Image tilesheet, out int res)
+        {
+            res = 1;
+            TilesheetType type = TilesheetType.InvalidInput;
+
+            (int x, int y)[] dimensions = new[] { (basicInputSheetWidth, basicSheetHeight), (splicedSheetWidth, basicSheetHeight), (fullSheetWidth, fullSheetHeight) };
+
+            foreach (var dim in dimensions)
+            {
+                int widthDiff = dim.x - tilesheet.Width;
+                int heightDiff = dim.y - tilesheet.Height;
+                if (widthDiff >= 0 && widthDiff <= 1 && heightDiff >= 0 && heightDiff <= 1)
+                {
+                    type = (TilesheetType)Array.IndexOf(dimensions, dim);
+                }
+                widthDiff = basicInputSheetWidth * 2 - tilesheet.Width;
+                heightDiff = basicSheetHeight * 2 - tilesheet.Height;
+                if (widthDiff >= 0 && widthDiff <= 2 && heightDiff >= 0 && heightDiff <= 2)
+                {
+                    type = (TilesheetType)Array.IndexOf(dimensions, dim);
+                    res = 2;
+                }
+            }
+
+            if (type <= TilesheetType.SplicedSheet) return type;
+
+            var tilesheetBmp = (Bitmap)tilesheet;
+            for (int i = 0; i < 8; i += res) //are there any pixels in the upper-leftmost 8x8 area
+            {
+                for (int j = 0; j < 8; j += res)
+                {
+                    if (tilesheetBmp.GetPixel(i, j).A == 255) return TilesheetType.TileUnderlay;
+                }
+            }
+            return TilesheetType.TileOverlay;
         }
         static void PrintConsoleError(Exception ex)
         {
@@ -123,14 +182,14 @@ namespace TilesheetHelper
             Console.ReadKey();
         }
 
-        static void GenerateSplicedTilesheet(string filePath)
+        static void GenerateSplicedTilesheet(TilesheetFile file)
         {
             if (!OperatingSystem.IsWindows()) return;
-            var bitmap = new Bitmap(117 * res, 45 * res); //144 135
+            var bitmap = new Bitmap(splicedSheetWidth, basicSheetHeight); //144 135
 
             canvas = Graphics.FromImage(bitmap);
             {
-                DrawRect(new Point(0, 0), new Point(0, 0), inputWidth, inputHeight); //copying original input
+                DrawRect(new Point(0, 0), new Point(0, 0), basicInputSheetWidth, basicSheetHeight); //copying original input
 
                 DrawRect(new Point(0, 0), new Point(45, 0), 4, 26); //left-right border blend
                 DrawRect(new Point(40, 0), new Point(49, 0), 4, 26);
@@ -176,18 +235,18 @@ namespace TilesheetHelper
 
             tilesheet = bitmap; // TODO :
 
-            bitmap.Save(Path.GetFileName(filePath).Replace(".png", "Spliced.png"), System.Drawing.Imaging.ImageFormat.Png); //patchwork?
+            SaveBitmap(bitmap, file, "Spliced");
         }
 
 
-        static void GenerateTileMergeUnderlayTilesheet(string filePath)
+        static void GenerateTileMergeUnderlayTilesheet(TilesheetFile file)
         {
             if (!OperatingSystem.IsWindows()) return;
-            var bitmap = new Bitmap(144 * res, 135 * res); //144 135
+            var bitmap = new Bitmap(fullSheetWidth, fullSheetHeight); //144 135
 
             canvas = Graphics.FromImage(bitmap);
             {
-                DrawRect(new Point(0, 0), new Point(0, 0), splicedSheetInputWidth, inputHeight); //copying original input
+                DrawRect(new Point(0, 0), new Point(0, 0), splicedSheetWidth, basicSheetHeight); //copying original input
 
                 DrawRect(new Point(9, 0), new Point(117, 0), 26, 8); //top-bottom borders
                 DrawRect(new Point(9, 18), new Point(117, 9), 26, 8);
@@ -259,14 +318,14 @@ namespace TilesheetHelper
 
             tilesheet = bitmap;
 
-            bitmap.Save(Path.GetFileName(filePath).Replace(".png", "TileMerge.png"), System.Drawing.Imaging.ImageFormat.Png); //patchwork?
+            SaveBitmap(bitmap, file, "TileMerge");
         }
 
-        static void GenerateTileMergeOverlayTilesheet(string filePath)
+        static void GenerateTileMergeOverlayTilesheet(TilesheetFile file)
         {
             if (!OperatingSystem.IsWindows()) return;
 
-            string overlayFilePath = filePath;
+            TilesheetFile overlayFile = file;
 
             var bitmap = new Bitmap(144, 135); //144 135
 
@@ -274,10 +333,10 @@ namespace TilesheetHelper
             var mergeShapeOutline = GetColors(mergeShapeBitmap).ElementAtOrDefault(0);
             var mergeOverlayTexture = (Bitmap)tilesheet; // Properties.Resources.DirtMerge; 
 
-            if (argss.Length > 1)
+            if (selectedFiles.Count > 1)
             {
-                mergeOverlayTexture = (Bitmap)Image.FromFile(argss[1]);
-                overlayFilePath = argss[1];
+                mergeOverlayTexture = (Bitmap)Image.FromFile(selectedFiles[1].path);
+                overlayFile = selectedFiles[1];
             }//!!!
 
             if (mergeOverlayTexture.Width > 144) mergeOverlayTexture = GetBaseResolutionBitmap(mergeOverlayTexture); //super duper hacky
@@ -303,15 +362,15 @@ namespace TilesheetHelper
                 canvas.Save();
             }
 
-            SaveBitmap(bitmap, overlayFilePath, "TileMergeOverlay");
+            SaveBitmap(bitmap, overlayFile, "TileMergeOverlay");
 
-            GenerateCombinedTileMergeTilesheet(filePath, bitmap);
+            GenerateCombinedTileMergeTilesheet(file, bitmap);
         }
 
-        static void GenerateCombinedTileMergeTilesheet(string filePath, Bitmap overlayTilesheet)
+        static void GenerateCombinedTileMergeTilesheet(TilesheetFile file, Bitmap overlayTilesheet)
         {
             if (!OperatingSystem.IsWindows()) return;
-            var underlayTilesheet = GetBaseResolutionBitmap((Bitmap)tilesheet);
+            var underlayTilesheet = (Bitmap)tilesheet;
 
             var bitmap = new Bitmap(144, 135); //144 135
 
@@ -354,13 +413,13 @@ namespace TilesheetHelper
 
                 canvas.Save();
             }
-            SaveBitmap(bitmap, filePath, "TileMergeSheet");
+            SaveBitmap(bitmap, file, "TileMergeSheet");
         }
         static void DrawRect(Point srcPoint, Point destPoint, int width, int height)
         {
             canvas.DrawImage(tilesheet,
-                new Rectangle(destPoint.X * res, destPoint.Y * res, width * res, height * res),
-                new Rectangle(srcPoint.X * res, srcPoint.Y * res, width * res, height * res), GraphicsUnit.Pixel);
+                new Rectangle(destPoint.X, destPoint.Y, width, height),
+                new Rectangle(srcPoint.X, srcPoint.Y, width, height), GraphicsUnit.Pixel);
         }
         enum Axis
         {
@@ -379,12 +438,15 @@ namespace TilesheetHelper
 
             for (int i = 0; i < pairs; i++)
             {
-                canvas.DrawImage(pixel, new Rectangle(destPoint.X * res + (axis == Axis.X ? i * 9 * res : 0), destPoint.Y * res + (axis == Axis.Y ? i * 9 * res : 0), res, res), new Rectangle(0, 0, res, res), GraphicsUnit.Pixel);
-                canvas.DrawImage(pixel, new Rectangle(nextPoint.X * res + (axis == Axis.X ? i * 9 * res : 0), nextPoint.Y * res + (axis == Axis.Y ? i * 9 * res : 0), res, res), new Rectangle(0, 0, res, res), GraphicsUnit.Pixel);
+                canvas.DrawImage(pixel, new Rectangle(destPoint.X + (axis == Axis.X ? i * 9 : 0), destPoint.Y + (axis == Axis.Y ? i * 9 : 0), 1, 1), new Rectangle(0, 0, 1, 1), GraphicsUnit.Pixel);
+                canvas.DrawImage(pixel, new Rectangle(nextPoint.X + (axis == Axis.X ? i * 9 : 0), nextPoint.Y + (axis == Axis.Y ? i * 9 : 0), 1, 1), new Rectangle(0, 0, 1, 1), GraphicsUnit.Pixel);
             }
         }
-        static Color[] GetColors(Bitmap bmp)
+        static Color[] GetColors(Bitmap bmp, TilesheetFile file = null)
         {
+            int res = 1;
+            if (file is not null) res = 2;
+
             List<Color> colors = new List<Color>();
             for (int x = 0; x < bmp.Width; x += res)
             {
@@ -418,10 +480,10 @@ namespace TilesheetHelper
                         if (bmp.GetPixel(i, j).A != 0)
                         {
                             Color color = bmp.GetPixel(i, j);
-                            upscaledBmp.SetPixel(i * res, j * res, color);
-                            upscaledBmp.SetPixel(i * res + 1, j * res, color);
-                            upscaledBmp.SetPixel(i * res, j * res + 1, color);
-                            upscaledBmp.SetPixel(i * res + 1, j * res + 1, color);
+                            upscaledBmp.SetPixel(i * 2, j * 2, color);
+                            upscaledBmp.SetPixel(i * 2 + 1, j * 2, color);
+                            upscaledBmp.SetPixel(i * 2, j * 2 + 1, color);
+                            upscaledBmp.SetPixel(i * 2 + 1, j * 2 + 1, color);
                         }
                     }
                 }
@@ -431,7 +493,7 @@ namespace TilesheetHelper
         }
         static Bitmap GetBaseResolutionBitmap(Bitmap bmp)
         {
-            if (res == 1) return bmp;
+            //if (res == 1) return bmp; this could be an error spot
 
             var downscaledBmp = new Bitmap(bmp.Width / 2, bmp.Height / 2);
 
@@ -451,10 +513,10 @@ namespace TilesheetHelper
             }
             return downscaledBmp;
         }
-        static void SaveBitmap(Bitmap bmp, string filePath, string fileSuffix)
+        static void SaveBitmap(Bitmap bitmap, TilesheetFile originFile, string fileSuffix) //Bitmap bmp, string filePath
         {
-            if (res == 2) bmp = GetUpscaledBitmap(bmp);
-            bmp.Save(Path.GetFileName(filePath).Replace(".png", fileSuffix + ".png"), System.Drawing.Imaging.ImageFormat.Png);
+            if (originFile.res == 2) bitmap = GetUpscaledBitmap(bitmap);
+            bitmap.Save(Path.GetFileName(originFile.path).Replace(".png", fileSuffix + ".png"), System.Drawing.Imaging.ImageFormat.Png);
         }
         static bool IsPixelInTileGridGap(int x, int y)
         {
