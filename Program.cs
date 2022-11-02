@@ -17,18 +17,21 @@ namespace TilesheetHelper
 
         //public static int res = 1; //resolution
 
-        public static Image tilesheet; //would like to replace but drawrect stuff... sighs... params[] for drawrect?. YES get rid of and also check getbaseresolution instances to remove. and make the overlay load in at the start.
+        //public static Image tilesheet; //would like to replace but drawrect stuff... sighs... params[] for drawrect?. YES get rid of and also check getbaseresolution instances to remove. and make the overlay load in at the start.
         public static Graphics canvas;
         public static Color internalOutlineColor;
         public static Stopwatch timer = new Stopwatch();
         //public static string[] selectedFiles = new string[0]; //array of a custom type that contains res data, filepath, tilesheet type?
         public static List<TilesheetFile> selectedFiles = new List<TilesheetFile>();
+        public static TilesheetFile primaryTilesheet = null;
+        public static string[] fileSuffixes = new string[] { "BasicInput", "Spliced", "TileMergeBase", "TileMergeOverlay", "TileMergeLayered" };
         public class TilesheetFile
         {
             public string path;
             public TilesheetType type;
             public int res;
             public Bitmap originalBitmap;
+            public Bitmap currentBitmap;
 
             public TilesheetFile(string path, TilesheetType type, int res)
             {
@@ -37,6 +40,7 @@ namespace TilesheetHelper
                 this.res = res;
                 this.originalBitmap = (Bitmap)Image.FromFile(path);
                 if (res == 2) originalBitmap = GetBaseResolutionBitmap(originalBitmap);
+                this.currentBitmap = originalBitmap;
             }
         }
 
@@ -52,22 +56,30 @@ namespace TilesheetHelper
             timer.Start();
 
             //string filePath;// = GetTileSheetPath(args);
-            TilesheetFile primaryTilesheet;
+
+            //TilesheetFile primaryTilesheet;
             if (GetTilesheetFile(args) is TilesheetFile file) primaryTilesheet = file;
             else return;
 
-            tilesheet = primaryTilesheet.originalBitmap; //Image.FromFile(primaryTilesheet.path);
+            Bitmap tilesheet = primaryTilesheet.originalBitmap; //Image.FromFile(primaryTilesheet.path);
 
             if (Path.GetFileName(primaryTilesheet.path) == "templateTilesheet.png") internalOutlineColor = Color.Black;
             else internalOutlineColor = GetColors((Bitmap)tilesheet).ElementAtOrDefault(1); //the second least darkest color by luminance
 
             //selectedFiles = args;
+            TilesheetOperation[] operationOrder = new TilesheetOperation[] { GenerateSplicedTilesheet, GenerateTileMergeUnderlayTilesheet, GenerateTileMergeOverlayTilesheet };
+            //merge should maybe not have an additional parameter at all? seems janky to have it check for a layer from within the option, but I'm not sure. Ideally yeah, feed it in, but idk.
 
-            GenerateSplicedTilesheet(primaryTilesheet);
+
+            GetDefaultOperation(primaryTilesheet.type);
+
+            GenerateTilesheet(primaryTilesheet, operationOrder[(int)primaryTilesheet.type]);//GenerateSplicedTilesheet, GenerateTileMergeUnderlayTilesheet, GenerateTileMergeOverlayTilesheet);
+
+            /*GenerateSplicedTilesheet(primaryTilesheet);
 
             GenerateTileMergeUnderlayTilesheet(primaryTilesheet);
 
-            GenerateTileMergeOverlayTilesheet(primaryTilesheet);
+            GenerateTileMergeOverlayTilesheet(primaryTilesheet);*/
 
         }
 
@@ -134,6 +146,7 @@ namespace TilesheetHelper
             SplicedSheet,
             TileUnderlay,
             TileOverlay,
+            MergedSheet, //complete, will never be an input (?)
         }
         static TilesheetType GetTilesheetType(Image tilesheet, out int res)
         {
@@ -150,8 +163,8 @@ namespace TilesheetHelper
                 {
                     type = (TilesheetType)Array.IndexOf(dimensions, dim);
                 }
-                widthDiff = basicInputSheetWidth * 2 - tilesheet.Width;
-                heightDiff = basicSheetHeight * 2 - tilesheet.Height;
+                widthDiff = dim.x * 2 - tilesheet.Width;
+                heightDiff = dim.y * 2 - tilesheet.Height;
                 if (widthDiff >= 0 && widthDiff <= 2 && heightDiff >= 0 && heightDiff <= 2)
                 {
                     type = (TilesheetType)Array.IndexOf(dimensions, dim);
@@ -171,6 +184,14 @@ namespace TilesheetHelper
             }
             return TilesheetType.TileOverlay;
         }
+
+        /*static TilesheetOperation GetDefaultOperation(TilesheetType type)
+        {
+            switch (type)
+            {
+                case TilesheetType.BasicInput: return g
+            }
+        }*/
         static void PrintConsoleError(Exception ex)
         {
             Console.ForegroundColor = ConsoleColor.Red;
@@ -182,8 +203,18 @@ namespace TilesheetHelper
             Console.ReadKey();
         }
 
+        static void GenerateTilesheet(TilesheetFile file, params TilesheetOperation[] operations)
+        {
+            foreach (var op in operations)
+            {
+                op(file);
+            }
+        }
+
+        delegate void TilesheetOperation(TilesheetFile file);
         static void GenerateSplicedTilesheet(TilesheetFile file)
         {
+            Console.WriteLine("spliced");
             if (!OperatingSystem.IsWindows()) return;
             var bitmap = new Bitmap(splicedSheetWidth, basicSheetHeight); //144 135
 
@@ -233,14 +264,15 @@ namespace TilesheetHelper
                 canvas.Save();
             }
 
-            tilesheet = bitmap; // TODO :
+            file.currentBitmap = bitmap; // TODO :
 
-            SaveBitmap(bitmap, file, "Spliced");
+            SaveBitmap(bitmap, file, fileSuffixes[(int)TilesheetType.SplicedSheet]);//"Spliced");
         }
 
 
         static void GenerateTileMergeUnderlayTilesheet(TilesheetFile file)
         {
+            Console.WriteLine("mergeunderlay");
             if (!OperatingSystem.IsWindows()) return;
             var bitmap = new Bitmap(fullSheetWidth, fullSheetHeight); //144 135
 
@@ -316,13 +348,14 @@ namespace TilesheetHelper
                 canvas.Save();
             }
 
-            tilesheet = bitmap;
+            file.currentBitmap = bitmap;
 
-            SaveBitmap(bitmap, file, "TileMerge");
+            SaveBitmap(bitmap, file, fileSuffixes[(int)TilesheetType.TileUnderlay]);//"TileMerge");
         }
 
         static void GenerateTileMergeOverlayTilesheet(TilesheetFile file)
         {
+            Console.WriteLine("mergeoverlay");
             if (!OperatingSystem.IsWindows()) return;
 
             TilesheetFile overlayFile = file;
@@ -331,7 +364,7 @@ namespace TilesheetHelper
 
             var mergeShapeBitmap = Properties.Resources.DirtMerge; //Image.FromFile()
             var mergeShapeOutline = GetColors(mergeShapeBitmap).ElementAtOrDefault(0);
-            var mergeOverlayTexture = (Bitmap)tilesheet; // Properties.Resources.DirtMerge; 
+            var mergeOverlayTexture = file.currentBitmap; // Properties.Resources.DirtMerge; 
 
             if (selectedFiles.Count > 1)
             {
@@ -362,15 +395,17 @@ namespace TilesheetHelper
                 canvas.Save();
             }
 
-            SaveBitmap(bitmap, overlayFile, "TileMergeOverlay");
+            //file.currentBitmap = bitmap;
 
-            GenerateCombinedTileMergeTilesheet(file, bitmap);
+            SaveBitmap(bitmap, overlayFile, fileSuffixes[(int)TilesheetType.TileOverlay]);//"TileMergeOverlay");
+
+            //GenerateCombinedTileMergeTilesheet(file, bitmap);
         }
 
         static void GenerateCombinedTileMergeTilesheet(TilesheetFile file, Bitmap overlayTilesheet)
         {
             if (!OperatingSystem.IsWindows()) return;
-            var underlayTilesheet = (Bitmap)tilesheet;
+            var underlayTilesheet = file.currentBitmap;
 
             var bitmap = new Bitmap(144, 135); //144 135
 
@@ -413,11 +448,11 @@ namespace TilesheetHelper
 
                 canvas.Save();
             }
-            SaveBitmap(bitmap, file, "TileMergeSheet");
+            SaveBitmap(bitmap, file, fileSuffixes[(int)TilesheetType.MergedSheet]);//"TileMergeSheet");
         }
         static void DrawRect(Point srcPoint, Point destPoint, int width, int height)
         {
-            canvas.DrawImage(tilesheet,
+            canvas.DrawImage(primaryTilesheet.currentBitmap,
                 new Rectangle(destPoint.X, destPoint.Y, width, height),
                 new Rectangle(srcPoint.X, srcPoint.Y, width, height), GraphicsUnit.Pixel);
         }
@@ -516,7 +551,10 @@ namespace TilesheetHelper
         static void SaveBitmap(Bitmap bitmap, TilesheetFile originFile, string fileSuffix) //Bitmap bmp, string filePath
         {
             if (originFile.res == 2) bitmap = GetUpscaledBitmap(bitmap);
-            bitmap.Save(Path.GetFileName(originFile.path).Replace(".png", fileSuffix + ".png"), System.Drawing.Imaging.ImageFormat.Png);
+            string path = Path.GetFileName(originFile.path);
+            Array.ForEach(fileSuffixes, x => path = path.Replace(x, ""));
+            path = path.Replace(".png", fileSuffix + ".png");
+            bitmap.Save(path, System.Drawing.Imaging.ImageFormat.Png);
         }
         static bool IsPixelInTileGridGap(int x, int y)
         {
