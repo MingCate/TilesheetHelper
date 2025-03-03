@@ -1,0 +1,135 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+		xmlns:local="using:TilesheetHelper"
+		xmlns:converters="using:TilesheetHelper.Converters"
+        x:Class="TilesheetHelper.MainWindow"
+        Title="TilesheetHelper"
+		Icon="/Assets/tilesheet-helper.ico"
+		Background="{StaticResource BackgroundMedium}"
+		DragDrop.AllowDrop="True">
+	<Window.Resources>
+		<converters:DebugConverter x:Key="DebugConverter"/>
+		<converters:BitmapAssetValueConverter x:Key="ValueToBitmapConverter"/>
+	</Window.Resources>
+	<Grid Name="MainPanel">
+		<Grid x:Name="Overlay" Panel.ZIndex="1000" IsEnabled="false">
+			<Grid.Background>
+				<SolidColorBrush Color="Black" Opacity="0"/>
+			</Grid.Background>
+			<Border Name="LoadBorder" CornerRadius="10" IsEnabled="false" Opacity="0" Background="{StaticResource GlassBlack}" Margin="38" Width="600" Height="180" VerticalAlignment="Top" HorizontalAlignment="Center" BoxShadow="0 0 20 14 Black" Initialized="LoadAnimationsHack">
+				<TextBlock Text="Load tilesheet" FontSize="30" Foreground="{StaticResource TextMedium}" FontWeight="SemiBold"  VerticalAlignment="Center" HorizontalAlignment="Center"/>
+				<Border.Transitions>
+					<Transitions>
+						<DoubleTransition Property="Opacity" Duration="0:0:0.17"/>
+					</Transitions>
+				</Border.Transitions>
+			</Border>
+		</Grid>
+
+		<Grid.ColumnDefinitions>
+			<ColumnDefinition Width="*" />
+			<ColumnDefinition Width="0" />
+		</Grid.ColumnDefinitions>
+
+		<StackPanel Name ="MiscButtons" Panel.ZIndex="2">
+			<Border Name="GearIcon" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10" Padding="10" CornerRadius="10" Width="45" Height="45" Initialized="SetupSettingsOpenButton" Background="{StaticResource BackgroundDark}"/>
+		</StackPanel>
+
+		<Grid Name="MainGrid" HorizontalAlignment="Stretch">
+			<Grid.RowDefinitions>
+				<RowDefinition Height="Auto"/>
+				<RowDefinition Height="Auto"/>
+				<RowDefinition Height="*"/>
+				<RowDefinition Height="220"/>
+			</Grid.RowDefinitions>
+
+			<StackPanel Grid.Row="0" Name="InputTemplates" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0" Orientation="Vertical" Spacing="0">
+				<TextBlock Name="SelectInputText" Text="Select an Input Template" FontSize="20" Foreground="{StaticResource TextLight}" FontWeight="Light" Margin="10" HorizontalAlignment="Center"/>
+				<StackPanel Name="InputTemplatesControl" Initialized="SetupInputTemplates" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,0,0,0" Orientation="Horizontal" Spacing="20" >
+				</StackPanel>
+				<!--<ItemsControl Name="InputTemplatesControl" Items="{Binding InputTemplates.ButtonsExposed}">
+					<ItemsControl.ItemTemplate>
+						<DataTemplate>
+							<local:BorderedImageButton Group="{Binding $parent[3].DataContext.InputTemplates}" Name="{Binding Button.Name}" Height="180"/>
+						</DataTemplate>
+					</ItemsControl.ItemTemplate>
+					<ItemsControl.ItemsPanel>
+						<ItemsPanelTemplate>
+							<StackPanel HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,0,0,0" Orientation="Horizontal" Spacing="20" />
+						</ItemsPanelTemplate>
+					</ItemsControl.ItemsPanel>
+				</ItemsControl>-->
+				<Separator Height="20" />
+			</StackPanel>
+			<StackPanel Grid.Row="1" Name="OutputTemplates" HorizontalAlignment="Stretch" VerticalAlignment="Top" Margin="0" Orientation="Vertical" Spacing="0" Background="{StaticResource BackgroundExtraDark}" Opacity="0" Classes="closing">
+				<TextBlock Text="Select an Output Template" FontSize="20" Foreground="{StaticResource TextMedium}" FontWeight="Normal" Margin="0,10,0,10" HorizontalAlignment="Center"/>
+
+				<ItemsControl Name="OutputTemplatesControl" Items="{Binding OutputTemplates.ButtonsExposed}">
+					<ItemsControl.ItemTemplate>
+						<DataTemplate>
+							<local:BorderedImageButton Group="{Binding $parent[3].DataContext.OutputTemplates}" Name="{Binding Button.Name}" Height="180" />
+						</DataTemplate>
+					</ItemsControl.ItemTemplate>
+					<ItemsControl.ItemsPanel>
+						<ItemsPanelTemplate>
+							<StackPanel HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,0,0,0" Orientation="Horizontal" Spacing="20" />
+						</ItemsPanelTemplate>
+					</ItemsControl.ItemsPanel>
+				</ItemsControl>
+				<Separator Height="20" />
+				<StackPanel.Transitions>
+					<Transitions>
+						<DoubleTransition Property="Opacity" Duration="0:0:0.5"/>
+					</Transitions>
+				</StackPanel.Transitions>
+			</StackPanel>
+			<DockPanel Grid.Row="3" Name="InfoBox" VerticalAlignment="Center" HorizontalAlignment="Stretch" Margin="20,0,40,0">
+				<StackPanel DockPanel.Dock="Left" VerticalAlignment="Center" Orientation="Vertical" Spacing="2">
+					<TextBlock Text="{Binding HoveredButton.Name}" FontSize="20" Foreground="{StaticResource TextLight}" FontWeight="Light"/>
+					<TextBlock Text="{Binding HoveredButton.Dimensions}" FontSize="14" Foreground="{StaticResource TextMedium}" FontWeight="Light"/>
+					<Image Source="{Binding HoveredButton.InfoUri, Converter={StaticResource ValueToBitmapConverter}}" HorizontalAlignment="Left" Stretch="None"/>
+				</StackPanel>
+
+				<StackPanel VerticalAlignment="Center" HorizontalAlignment="Left" Margin="80,0,0,0" Orientation="Vertical" Width="800">
+					<TextBlock DockPanel.Dock="Left" TextWrapping="Wrap" Text="{Binding HoveredButton.Description}" FontSize="18" Foreground="{StaticResource TextLight}" FontWeight="Light" Margin="0,10,0,10"/>
+				</StackPanel>
+				<DockPanel.Transitions>
+					<Transitions>
+						<DoubleTransition Property="Opacity" Duration="0:0:0.1"/>
+					</Transitions>
+				</DockPanel.Transitions>
+			</DockPanel>
+		</Grid>
+		<Border HorizontalAlignment="Right" BoxShadow="5 5 16 4 Black">
+			<DockPanel Grid.Column="1" Name="ExportPanel" Background="{StaticResource BackgroundDark}" VerticalAlignment="Stretch" HorizontalAlignment="Right" Width="0">
+				<!--<Border CornerRadius="10" Background="{DynamicResource BackgroundExtraDark}" Height="180">-->
+				<Image Stretch="None" DockPanel.Dock="Top" HorizontalAlignment="Center" VerticalAlignment="Top" Name="PendingExport" Margin="0,30,0,0"/>
+				<!--</Border>-->
+				<!--<StackPanel DockPanel.Dock="Top" HorizontalAlignment="Center" Margin="0,30,0,0" Orientation="Horizontal" Spacing="20">
+					<TextBlock Text="Internal Outline Color:" FontSize="14" Foreground="{StaticResource TextMedium}" FontWeight="Light" HorizontalAlignment="Center"/>
+					<Rectangle Width="20" Height="20" Fill="Blue"/>
+					<Rectangle Width="20" Height="20" Fill="Green"/>
+					<Rectangle Width="20" Height="20" Fill="Red"/>
+				</StackPanel>-->
+				<StackPanel DockPanel.Dock="Top" HorizontalAlignment="Center" Margin="0,30,0,0" Orientation="Vertical" Spacing="8">
+					<TextBlock Text="Internal Outline" FontSize="16" Foreground="{StaticResource TextMedium}" FontWeight="Medium" HorizontalAlignment="Center"/>
+					<ItemsControl Name="ImageColors" Items="{Binding inputSheetColors}">
+						<ItemsControl.ItemTemplate>
+							<DataTemplate>
+								<local:ColorSelectButton Width="26" Height="26" Fill="{Binding}" Name="ColorSelectButton"/>
+							</DataTemplate>
+						</ItemsControl.ItemTemplate>
+						<ItemsControl.ItemsPanel>
+							<ItemsPanelTemplate>
+								<WrapPanel Orientation="Horizontal"/>
+							</ItemsPanelTemplate>
+						</ItemsControl.ItemsPanel>
+					</ItemsControl>
+				</StackPanel>
+				<local:GenerationButton DockPanel.Dock="Bottom" Name="GenerateButton" Width="180" Height="40" VerticalAlignment="Bottom" CornerRadius="10" Background="{DynamicResource BackgroundAccent}" Margin="20,0,20,40" Opacity="0">
+					<TextBlock Text="Export" FontSize="20" Foreground="{StaticResource TextExtraLight}" FontWeight="Heavy" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+				</local:GenerationButton>
+			</DockPanel>
+		</Border>
+	</Grid>
+</Window>

@@ -1,0 +1,19 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:converters="using:TilesheetHelper.Converters"
+             mc:Ignorable="d" d:DesignHeight="200" d:DesignWidth="200"
+             x:Class="TilesheetHelper.BorderedImageButton">
+    <UserControl.Resources>
+		<converters:BitmapAssetValueConverter x:Key="ValueToBitmapConverter"/>
+	</UserControl.Resources>
+	<Border Name="Border" CornerRadius="10" Background="{DynamicResource BackgroundDark}" Height="180" Padding="10,0,10,0" PointerPressed="OnBorderClicked" PointerEnter="OnBorderHovered" PointerLeave="OnBorderUnhovered">
+			<Image Name="Image" Source="{Binding Uri, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource ValueToBitmapConverter}}" Stretch="None"/>
+		<Border.Transitions>
+			<Transitions>
+				<BrushTransition Property="Background" Duration="0:0:0.1"/>
+			</Transitions>
+		</Border.Transitions>
+	</Border>
+</UserControl>

@@ -1,0 +1,17 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="TilesheetHelper.ColorSelectButton">
+	<Border Name="Border" Background="{DynamicResource Clear}" PointerPressed="OnBorderClicked" PointerEnter="OnBorderHovered" PointerLeave="OnBorderUnhovered" DataContext="{Binding}">
+		<Border Name="BlackBorder" Width="22" Height="22"  Background="Black" DataContext="{Binding}">
+			<Rectangle Width="20" Height="20" Fill="{Binding}"/>
+		</Border>
+		<Border.Transitions>
+			<Transitions>
+				<BrushTransition Property="Background" Duration="0:0:0.1"/>
+			</Transitions>
+		</Border.Transitions>
+	</Border>
+</UserControl>

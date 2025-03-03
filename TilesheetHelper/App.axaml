@@ -1,0 +1,88 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="using:TilesheetHelper"
+             x:Class="TilesheetHelper.App">
+    <Application.DataTemplates>
+        <local:ViewLocator/>
+    </Application.DataTemplates>
+
+    <Application.Styles>
+        <FluentTheme Mode="Light"/>
+		<!--<Style Selector="Control[PointerPressed=null]" >
+			<Setter Property="Cursor" Value="Hand" />
+		</Style>-->
+    </Application.Styles>
+	<Application.Resources>
+        <SolidColorBrush x:Key="BackgroundLight" Color="#2a484b"/>
+        <SolidColorBrush x:Key="BackgroundMedium" Color="#1e2f34"/>
+        <SolidColorBrush x:Key="BackgroundDark" Color="#172529"/>
+        <SolidColorBrush x:Key="BackgroundExtraDark" Color="#0f1a1b"/>
+        <SolidColorBrush x:Key="BackgroundAccent" Color="#50b786"/>
+        <SolidColorBrush x:Key="TextExtraLight" Color="#dcdde0"/>
+        <SolidColorBrush x:Key="TextLight" Color="#8ea7ac"/>
+        <SolidColorBrush x:Key="TextMedium" Color="#58767b"/>
+		<SolidColorBrush x:Key="TextDark" Color="#436267"/>
+
+		<SolidColorBrush x:Key="Clear" Color="#00000000"/>
+		<SolidColorBrush x:Key="GlassBlack" Color="#CC000000"/>
+
+		<FontFamily x:Key="AndyBold">avares://TilesheetHelper/Assets/AndyBold.ttf#Andy</FontFamily>
+		<WindowIcon x:Key="ErrorIcon">avares://TilesheetHelper/Assets/error.ico</WindowIcon>
+	</Application.Resources>
+	
+	<Application.Styles>
+		<Style Selector="StackPanel.opening">
+			<Style.Animations>
+				<Animation Duration="0:0:0.5" IterationCount="1" Easing="QuinticEaseOut">
+					<KeyFrame Cue="0%">
+						<Setter Property="Height" Value="0"/>
+					</KeyFrame>
+					<KeyFrame Cue="100%">
+						<Setter Property="Height" Value="244"/>
+					</KeyFrame>
+				</Animation>
+			</Style.Animations>
+			<Setter Property="Height" Value="244"/>
+			<Setter Property="IsHitTestVisible" Value="True"/>
+		</Style>
+		<Style Selector="ItemsControl.opening">
+			<Style.Animations>
+				<Animation Duration="0:0:0.2" IterationCount="1">
+					<KeyFrame Cue="0%">
+						<Setter Property="Opacity" Value="0"/>
+					</KeyFrame>
+					<KeyFrame Cue="100%">
+						<Setter Property="Opacity" Value="1"/>
+					</KeyFrame>
+				</Animation>
+			</Style.Animations>
+			<Setter Property="Opacity" Value="1"/>
+		</Style>
+		<Style Selector="StackPanel.closing">
+			<Style.Animations>
+				<Animation Duration="0:0:0.5" IterationCount="1" Easing="CubicEaseIn">
+					<KeyFrame Cue="0%">
+						<Setter Property="Height" Value="244"/>
+					</KeyFrame>
+					<KeyFrame Cue="100%">
+						<Setter Property="Height" Value="0"/>
+					</KeyFrame>
+				</Animation>
+			</Style.Animations>
+			<Setter Property="IsHitTestVisible" Value="False"/>
+		</Style>
+		<Style Selector="ItemsControl.closing">
+			<Style.Animations>
+				<Animation Duration="0:0:0.2" IterationCount="1">
+					<KeyFrame Cue="0%">
+						<Setter Property="Opacity" Value="1"/>
+					</KeyFrame>
+					<KeyFrame Cue="100%">
+						<Setter Property="Opacity" Value="0"/>
+					</KeyFrame>
+				</Animation>
+			</Style.Animations>
+			<Setter Property="Opacity" Value="0"/>
+		</Style>
+	</Application.Styles>
+</Application>

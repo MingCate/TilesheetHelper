@@ -1,0 +1,24 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="TilesheetHelper.Toggle">
+	<Canvas DataContext="{Binding}" Name="Border" Width="35" Height="16" PointerPressed="OnClick" Background="Transparent" Cursor="Hand">
+			<Line Name="Bar" StartPoint="0,0" EndPoint="17,0" StrokeThickness="11" Stroke="Black" StrokeLineCap="Round" Canvas.Left="8" Canvas.Top="8">
+				<Line.Transitions>
+					<Transitions>
+						<BrushTransition Property="Stroke" Duration="0:0:0.1" Easing="SineEaseIn"/>
+					</Transitions>
+				</Line.Transitions>
+			</Line>
+			<Ellipse Name="Circle" Width="16" Height="16" Fill="{StaticResource TextExtraLight}">
+				<Ellipse.Transitions>
+					<Transitions>
+						<ThicknessTransition Property="Margin" Duration="0:0:0.1" Easing="SineEaseIn"/>
+					</Transitions>
+				</Ellipse.Transitions>
+			</Ellipse>
+	</Canvas>
+</UserControl>
+
